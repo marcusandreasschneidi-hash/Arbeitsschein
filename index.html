@@ -1,1 +1,414 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Leineschlepper — Auftragserfassung</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #f0f0f0; color: #1a1a1a; font-size: 16px; }
+  .header { background: #1a2e4a; color: white; padding: 16px 20px; position: sticky;
+             top: 0; z-index: 10; display: flex; align-items: center; gap: 12px; }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .header span { font-size: 13px; opacity: .7; }
+  .content { padding: 12px; max-width: 640px; margin: 0 auto; }
+  .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px;
+          box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .card-title { font-size: 12px; font-weight: 600; text-transform: uppercase;
+                letter-spacing: .06em; color: #888; margin-bottom: 14px;
+                padding-bottom: 8px; border-bottom: 1px solid #f0f0f0; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 13px; color: #555; margin-bottom: 4px; font-weight: 500; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px;
+    font-size: 16px; color: #1a1a1a; background: white; -webkit-appearance: none; }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: none; border-color: #1a2e4a; box-shadow: 0 0 0 3px rgba(26,46,74,.1); }
+  .field textarea { min-height: 80px; resize: vertical; font-family: inherit; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .pos-row { display: grid; grid-template-columns: 1fr 90px; gap: 8px; align-items: end; margin-bottom: 8px; }
+  .pos-row .lbl { font-size: 14px; color: #333; padding-top: 18px; font-weight: 500; }
+  .pos-row .sublbl { font-size: 11px; color: #999; display: block; margin-bottom: 2px; }
+  .karton-row { display: grid; grid-template-columns: 1fr 80px 80px; gap: 8px; align-items: end; margin-bottom: 8px; }
+  .karton-row .lbl { font-size: 14px; color: #333; padding-top: 18px; }
+  .check-row { display: flex; align-items: center; gap: 10px; padding: 10px 0;
+               border-bottom: 1px solid #f5f5f5; }
+  .check-row:last-child { border-bottom: none; }
+  .check-row input[type=checkbox] { width: 20px; height: 20px; flex-shrink: 0; cursor: pointer; }
+  .check-row label { font-size: 15px; color: #333; cursor: pointer; flex: 1; }
+  .check-row .price { font-size: 13px; color: #888; }
+  .radio-row { display: flex; gap: 16px; margin-top: 6px; }
+  .radio-row label { display: flex; align-items: center; gap: 6px; font-size: 15px; cursor: pointer; }
+  .total-box { background: #f8f9fa; border-radius: 8px; padding: 14px; margin-top: 8px; }
+  .total-line { display: flex; justify-content: space-between; font-size: 14px;
+                color: #555; margin-bottom: 5px; }
+  .total-line.big { font-size: 20px; font-weight: 700; color: #1a1a1a; margin-top: 8px;
+                    padding-top: 8px; border-top: 1px solid #ddd; }
+  .diff-box { background: #f0f7ff; border-radius: 6px; padding: 8px 10px; margin-top: 6px; font-size: 13px; }
+  .diff-box span { font-weight: 600; }
+  .diff-box.over { background: #fff0f0; }
+  .submit-btn { width: 100%; padding: 16px; background: #1a2e4a; color: white;
+                border: none; border-radius: 12px; font-size: 17px; font-weight: 600;
+                cursor: pointer; margin-top: 4px; letter-spacing: .02em; }
+  .submit-btn:active { opacity: .85; }
+  .required { color: #e53; }
+  .hint { font-size: 12px; color: #999; margin-top: 3px; }
+  input[type=number] { -moz-appearance: textfield; }
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+</style>
+</head>
+<body>
 
+<div class="header">
+  <div>
+    <h1>Auftragserfassung</h1>
+    <span>Leineschlepper GbR</span>
+  </div>
+</div>
+
+<div class="content">
+<form id="form" onsubmit="absenden(event)">
+
+  <!-- AUFTRAGSDATEN -->
+  <div class="card">
+    <div class="card-title">Auftragsdaten</div>
+    <div class="row2">
+      <div class="field">
+        <label>Datum <span class="required">*</span></label>
+        <input type="date" id="datum" required>
+      </div>
+      <div class="field">
+        <label>Auftragsleiter <span class="required">*</span></label>
+        <input type="text" id="auftragsleiter" placeholder="Name" required>
+      </div>
+    </div>
+    <div class="field">
+      <label>Auftragsplaner</label>
+      <input type="text" id="auftragsplaner" placeholder="Name">
+    </div>
+  </div>
+
+  <!-- KUNDENDATEN -->
+  <div class="card">
+    <div class="card-title">Kundendaten</div>
+    <div class="field">
+      <label>Kundennummer <span style="font-size:11px;color:#999">(bei Bestandskunden — steht auf der Rechnung)</span></label>
+      <input type="text" id="kundennummer" placeholder="z.B. K-1042">
+    </div>
+    <div class="field">
+      <label>Kundenname <span class="required">*</span></label>
+      <input type="text" id="kundenname" placeholder="Vor- und Nachname" required>
+    </div>
+    <div class="field">
+      <label>Rechnungsadresse <span class="required">*</span></label>
+      <textarea id="adresse" placeholder="Straße, PLZ, Ort" required></textarea>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>E-Mail Kunde</label>
+        <input type="email" id="email" placeholder="optional">
+      </div>
+      <div class="field">
+        <label>Telefon</label>
+        <input type="tel" id="telefon" placeholder="optional">
+      </div>
+    </div>
+    <div class="check-row">
+      <input type="checkbox" id="neukunde">
+      <label for="neukunde">Neukunde — in Lexoffice anlegen</label>
+    </div>
+  </div>
+
+  <!-- ZEITEN — ABRECHNUNGSSCHEIN -->
+  <div class="card">
+    <div class="card-title">Zeiten (Abrechnungsschein)</div>
+
+    <div style="font-size:13px;font-weight:600;color:#444;margin-bottom:8px;">Einladen</div>
+    <div class="row2">
+      <div class="field">
+        <label>Start</label>
+        <input type="time" id="einladen_start" oninput="berechneZeit('einladen')">
+      </div>
+      <div class="field">
+        <label>Ende</label>
+        <input type="time" id="einladen_ende" oninput="berechneZeit('einladen')">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Mitarbeiter</label>
+        <input type="number" id="einladen_ma" min="1" max="20" placeholder="Anzahl" oninput="berechneZeit('einladen')">
+      </div>
+      <div class="field">
+        <label>Kalk. Stunden</label>
+        <input type="number" id="einladen_kalk" step="0.5" placeholder="h" oninput="berechneZeit('einladen')">
+      </div>
+    </div>
+    <div class="diff-box" id="einladen_diff" style="display:none"></div>
+
+    <div style="font-size:13px;font-weight:600;color:#444;margin-bottom:8px;margin-top:14px;">Ausladen</div>
+    <div class="row2">
+      <div class="field">
+        <label>Start</label>
+        <input type="time" id="ausladen_start" oninput="berechneZeit('ausladen')">
+      </div>
+      <div class="field">
+        <label>Ende</label>
+        <input type="time" id="ausladen_ende" oninput="berechneZeit('ausladen')">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Mitarbeiter</label>
+        <input type="number" id="ausladen_ma" min="1" max="20" placeholder="Anzahl" oninput="berechneZeit('ausladen')">
+      </div>
+      <div class="field">
+        <label>Kalk. Stunden</label>
+        <input type="number" id="ausladen_kalk" step="0.5" placeholder="h" oninput="berechneZeit('ausladen')">
+      </div>
+    </div>
+    <div class="diff-box" id="ausladen_diff" style="display:none"></div>
+  </div>
+
+  <!-- POSITIONEN — DYNAMISCH AUS AB + EDITIERBAR -->
+  <div class="card">
+    <div class="card-title">Positionen (tatsächlich geleistet)</div>
+
+    <div id="pos-liste"></div>
+
+    <button type="button" onclick="addPos()" style="width:100%;padding:10px;margin-top:8px;
+      background:white;border:1px dashed #aaa;border-radius:8px;font-size:14px;color:#555;cursor:pointer;">
+      + Position hinzufügen
+    </button>
+
+    <!-- SONSTIGES -->
+    <div class="field" style="margin-top:12px">
+      <label>Sonstiges / Material</label>
+      <input type="text" id="sonstiges_text" placeholder="Beschreibung">
+    </div>
+    <div class="field">
+      <label>Betrag Sonstiges</label>
+      <input type="number" id="sonstiges_preis" min="0" step="0.01" placeholder="0,00" oninput="berechne()">
+    </div>
+
+    <!-- GESAMTBERECHNUNG -->
+    <div class="total-box" id="total_box" style="margin-top:12px">
+      <div class="total-line big"><span>Gesamt (inkl. MwSt.)</span><span id="t_gesamt">0,00 €</span></div>
+    </div>
+  </div>
+
+  <!-- ABSCHLUSS -->
+  <div class="card">
+    <div class="card-title">Abschluss</div>
+    <div class="field">
+      <label>Zahlungsart</label>
+      <div class="radio-row">
+        <label><input type="radio" name="zahlung" value="bar" id="z_bar"> Bar bezahlt</label>
+        <label><input type="radio" name="zahlung" value="überweisung" id="z_uw" checked> Überweisung</label>
+      </div>
+    </div>
+    <div class="field" style="margin-top:10px">
+      <label>Notizen / Besonderheiten</label>
+      <textarea id="notizen" placeholder="z.B. Schäden, Besonderheiten, Abweichungen …"></textarea>
+    </div>
+  </div>
+
+  <button type="submit" class="submit-btn">Absenden per E-Mail</button>
+  <p style="text-align:center;font-size:12px;color:#999;margin-top:8px;padding-bottom:20px">
+    Öffnet die Mail-App — einmal auf Senden tippen</p>
+
+</form>
+</div>
+
+<script>
+const EMPFAENGER = "Rechnung@leineschlepper.de";
+
+function fmt(n){ return n.toFixed(2).replace(".",",") + " €"; }
+function txt(id){ return document.getElementById(id).value.trim(); }
+function chk(id){ return document.getElementById(id).checked; }
+let posCounter = 0;
+
+// ── Positionen dynamisch ───────────────────────────────────────────────────────
+
+function addPos(name="", qty=1, preis=0){
+  const id = posCounter++;
+  const div = document.createElement("div");
+  div.id = `pos_${id}`;
+  div.style.cssText = "display:grid;grid-template-columns:1fr 70px 80px 80px 36px;gap:6px;align-items:end;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #f0f0f0";
+  div.innerHTML = `
+    <div><label style="font-size:12px;color:#555">Bezeichnung</label>
+      <input type="text" value="${name}" placeholder="z.B. Einladen" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:15px" oninput="berechne()">
+    </div>
+    <div><label style="font-size:12px;color:#555">Menge</label>
+      <input type="number" value="${qty}" min="0" step="0.5" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:15px" oninput="berechne()">
+    </div>
+    <div><label style="font-size:12px;color:#555">Einzel €</label>
+      <input type="number" value="${preis}" min="0" step="0.01" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:15px" oninput="berechne()">
+    </div>
+    <div><label style="font-size:12px;color:#555">Gesamt</label>
+      <div id="sum_${id}" style="padding:8px 0;font-size:15px;font-weight:600;color:#1a2e4a">${fmt(qty*preis)}</div>
+    </div>
+    <div style="padding-bottom:2px">
+      <button type="button" onclick="removePos(${id})" style="width:34px;height:34px;border:1px solid #ddd;border-radius:6px;background:white;font-size:16px;cursor:pointer;color:#999">✕</button>
+    </div>`;
+  document.getElementById("pos-liste").appendChild(div);
+  // Update sum on qty/preis change
+  const inputs = div.querySelectorAll("input[type=number]");
+  inputs.forEach(inp => inp.addEventListener("input", () => {
+    const q = parseFloat(inputs[0].value)||0;
+    const p = parseFloat(inputs[1].value)||0;
+    document.getElementById(`sum_${id}`).textContent = fmt(q*p);
+    berechne();
+  }));
+  berechne();
+}
+
+function removePos(id){
+  const el = document.getElementById(`pos_${id}`);
+  if(el) el.remove();
+  berechne();
+}
+
+function getPositionen(){
+  const rows = document.getElementById("pos-liste").children;
+  const result = [];
+  for(const row of rows){
+    const inputs = row.querySelectorAll("input");
+    const name  = inputs[0].value.trim();
+    const qty   = parseFloat(inputs[1].value)||0;
+    const preis = parseFloat(inputs[2].value)||0;
+    if(name && qty) result.push({name, qty, preis});
+  }
+  return result;
+}
+
+function berechne(){
+  const pos    = getPositionen();
+  const sonst  = parseFloat(document.getElementById("sonstiges_preis").value)||0;
+  const gesamt = pos.reduce((s,p)=>s+p.qty*p.preis, 0) + sonst;
+  document.getElementById("t_gesamt").textContent = fmt(gesamt);
+}
+
+function berechneZeit(phase){
+  const start = document.getElementById(phase+"_start").value;
+  const ende  = document.getElementById(phase+"_ende").value;
+  const ma    = parseFloat(document.getElementById(phase+"_ma").value)||0;
+  const kalk  = parseFloat(document.getElementById(phase+"_kalk").value)||0;
+  const box   = document.getElementById(phase+"_diff");
+  if(!start||!ende||!ma){ box.style.display="none"; return; }
+  const [sh,sm]=start.split(":").map(Number);
+  const [eh,em]=ende.split(":").map(Number);
+  const minuten=(eh*60+em)-(sh*60+sm);
+  if(minuten<=0){ box.style.display="none"; return; }
+  const stunden=(minuten/60*ma).toFixed(2);
+  const diff=(stunden-kalk).toFixed(2);
+  box.style.display="block";
+  box.className="diff-box"+(diff>0?" over":"");
+  box.innerHTML=`Gesamtzeit: <span>${stunden} Std.</span> | Differenz: <span>${diff>0?"+":""}${diff} Std.</span>`;
+}
+
+function ladeUrlParameter(){
+  const p = new URLSearchParams(window.location.search);
+  if(p.get("name")) document.getElementById("kundenname").value = decodeURIComponent(p.get("name"));
+  if(p.get("nr"))   document.getElementById("kundennummer").value = decodeURIComponent(p.get("nr"));
+  if(p.get("kid"))  document.getElementById("kundennummer").dataset.kid = p.get("kid");
+
+  // Positionen aus QR-Code laden: pos=Name~qty~preis|Name~qty~preis
+  const posParam = p.get("pos");
+  if(posParam){
+    posParam.split("|").forEach(teil => {
+      const [name, qty, preis] = teil.split("~");
+      if(name) addPos(decodeURIComponent(name), parseFloat(qty)||1, parseFloat(preis)||0);
+    });
+  }
+}
+
+function formatiereEmail(){
+  const d   = txt("datum")||"–";
+  const al  = txt("auftragsleiter")||"–";
+  const ap  = txt("auftragsplaner")||"–";
+  const kn  = txt("kundenname")||"–";
+  const knr = txt("kundennummer")||"–";
+  const adr = txt("adresse")||"–";
+  const em  = txt("email")||"–";
+  const tel = txt("telefon")||"–";
+  const nk  = chk("neukunde")?"Ja":"Nein";
+
+  const ei_start = txt("einladen_start")||"–";
+  const ei_ende  = txt("einladen_ende")||"–";
+  const ei_ma    = txt("einladen_ma")||"–";
+  const ei_kalk  = txt("einladen_kalk")||"–";
+  const au_start = txt("ausladen_start")||"–";
+  const au_ende  = txt("ausladen_ende")||"–";
+  const au_ma    = txt("ausladen_ma")||"–";
+  const au_kalk  = txt("ausladen_kalk")||"–";
+
+  const zahlung = document.querySelector("input[name=zahlung]:checked").value;
+  const notizen = txt("notizen")||"–";
+  const gesamt  = document.getElementById("t_gesamt").textContent;
+
+  const pos = getPositionen();
+  let posText = "";
+  pos.forEach((p,i) => {
+    posText += `Pos ${i+1}: ${p.name} | Menge: ${p.qty} | Einzelpreis: ${p.preis} € | Gesamt: ${(p.qty*p.preis).toFixed(2)} €\n`;
+  });
+  const st = txt("sonstiges_text");
+  const sp = parseFloat(document.getElementById("sonstiges_preis").value)||0;
+  if(st||sp) posText += `Sonstiges: ${st||"–"} | ${sp} €\n`;
+
+  return `LEINESCHLEPPER AUFTRAGSERFASSUNG
+==========================================
+Datum: ${d}
+Auftragsleiter: ${al}
+Auftragsplaner: ${ap}
+
+KUNDENDATEN
+------------------------------------------
+Name: ${kn}
+Kundennummer: ${knr}
+Adresse: ${adr}
+E-Mail: ${em}
+Telefon: ${tel}
+Neukunde: ${nk}
+
+ZEITEN
+------------------------------------------
+Einladen Start: ${ei_start}
+Einladen Ende: ${ei_ende}
+Einladen Mitarbeiter: ${ei_ma}
+Einladen Kalk. Stunden: ${ei_kalk}
+Ausladen Start: ${au_start}
+Ausladen Ende: ${au_ende}
+Ausladen Mitarbeiter: ${au_ma}
+Ausladen Kalk. Stunden: ${au_kalk}
+
+POSITIONEN
+------------------------------------------
+${posText}
+ABSCHLUSS
+------------------------------------------
+Zahlungsart: ${zahlung}
+Gesamtbetrag: ${gesamt}
+Notizen: ${notizen}
+==========================================`;
+}
+
+function absenden(e){
+  e.preventDefault();
+  if(!txt("kundenname")||!txt("auftragsleiter")||!txt("datum")){
+    alert("Bitte Pflichtfelder ausfüllen: Datum, Auftragsleiter, Kundenname");
+    return;
+  }
+  const betreff = `Auftragserfassung: ${txt("kundenname")} – ${txt("datum")}`;
+  const body    = formatiereEmail();
+  window.location.href = `mailto:${EMPFAENGER}?subject=${encodeURIComponent(betreff)}&body=${encodeURIComponent(body)}`;
+}
+
+document.getElementById("datum").valueAsDate = new Date();
+ladeUrlParameter();
+berechne();
+</script>
+</body>
+</html>
